@@ -1,0 +1,107 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>PolyChat 2000</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <script>
+        var person = prompt("Merci d'entrer votre nom", "");
+        if (person == null || person == "") {
+            user = "Anonyme";
+        } else {
+            user = person;
+        }
+    </script>
+    <h1>Poly'Chat 2000</h1>
+    <h2>Connecté en tant que
+        <script>document.write(user)</script>
+    </h2>
+
+
+    <ul id="messages"></ul>
+    <form action="">
+        <p class="typing" id="typingID"></p>
+        <br>
+        <input id="m" autocomplete="off" />
+        <button>Send</button>
+    </form>
+
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script>
+
+        $(function () {
+            var socket = io();
+            var audioObj = new Audio('/msn_message.mp3');
+            var boolTyping = false;
+
+            socket.emit('on', user);
+
+            $('form').submit(function (e) {
+                e.preventDefault(); // prevents page reloading
+                if($('#m').val()!="")
+		{
+			socket.emit('chat message', user + " : " + $('#m').val());
+                	$('#m').val('');
+                }
+		return false;
+            });
+
+            //Listner sur l'écriture
+            document.getElementById("m").addEventListener("input", write);
+            function write() {
+                if (boolTyping == true) {
+                    clearTimeout(myVar);
+                    myVar = setTimeout(endWrite, 1000);
+                }
+                else {
+                    socket.emit('typingON', user);
+                    myVar = setTimeout(endWrite, 1000);
+                    boolTyping = true;
+                }
+            }
+
+            function endWrite() {
+                socket.emit('typingOFF', user);
+                boolTyping = false;
+            }
+
+            socket.on('typing', function (msg) {
+                document.getElementById("typingID").innerHTML = msg;
+            });
+
+            socket.on('chat message', function (msg) {
+                if (msg.includes("@")) {
+                    if (msg.split('@').pop().split(' ')[0] == user) {
+                        $('#messages').append($('<li class="Perso">').text("[Perso] " + msg));
+                        audioObj.play();
+                    }
+                }
+                else {
+                    $('#messages').append($('<li>').text(msg));
+                    audioObj.play();
+                }
+		window.scrollTo(0,document.body.scrollHeight);
+
+            });
+
+            socket.on('on', function (msg) {
+                $('#messages').append($('<li class="ON">').text(msg));
+            });
+
+            socket.on('off', function (msg) {
+                $('#messages').append($('<li class="OFF">').text(msg));
+            });
+        });
+    </script>
+
+
+
+</body>
+
+</html>
